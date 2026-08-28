@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>3D FPS RPG: 10 Level Zombie Slayer</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: none; }
+  body { background: #05070a; color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; width: 100vw; }
+  
+  #game-container { position: relative; width: 100%; height: 100%; max-width: 960px; max-height: 600px; border: 2px solid #333; border-radius: 8px; overflow: hidden; background: #000; box-shadow: 0 10px 40px rgba(0,0,0,0.9); }
+  canvas#gameCanvas { display: block; width: 100%; height: 100%; }
+
+  .screen { position: absolute; inset: 0; background: rgba(10, 14, 20, 0.96); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 30; padding: 15px; text-align: center; overflow-y: auto; }
+  h1 { font-size: 1.9rem; color: #e63946; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 2px; }
+  p { color: #ccc; margin-bottom: 15px; font-size: 0.85rem; }
+
+  .section-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 8px; font-weight: bold; }
+
+  .device-btn-group { display: flex; gap: 20px; margin-bottom: 15px; }
+  .device-card { background: #161922; border: 2px solid #2d3345; border-radius: 12px; width: 150px; padding: 20px 10px; cursor: pointer; transition: 0.2s; }
+  .device-card:hover, .device-card.active { border-color: #ffb703; background: #222736; transform: scale(1.05); }
+  .device-card .icon { font-size: 2.2rem; margin-bottom: 8px; }
+  .device-card .title { font-weight: bold; font-size: 1rem; color: #f1faee; }
+
+  .card-container { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; justify-content: center; }
+  .char-card { background: #161922; border: 2px solid #2d3345; border-radius: 8px; width: 160px; padding: 10px; cursor: pointer; transition: all 0.2s; text-align: left; }
+  .char-card:hover, .char-card.active { border-color: #f1faee; transform: translateY(-2px); background: #222736; }
+  .char-card h2 { color: #f1faee; font-size: 1rem; margin-bottom: 4px; border-bottom: 1px solid #333; padding-bottom: 3px; }
+  .char-stat { font-size: 0.75rem; margin: 3px 0; color: #aaa; }
+  .char-stat span { color: #fff; font-weight: bold; }
+
+  .speed-container { display: flex; gap: 8px; margin-bottom: 16px; }
+  .speed-btn { background: #161922; border: 2px solid #2d3345; color: #aaa; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.8rem; }
+  .speed-btn.active { border-color: #ffb703; color: #ffb703; background: #2a2215; }
+
+  .btn { background: #e63946; color: #fff; border: none; padding: 10px 28px; font-size: 1rem; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+  .btn:hover { background: #ff4d5a; transform: scale(1.03); }
+
+  #hud { position: absolute; top: 10px; left: 10px; z-index: 15; pointer-events: none; }
+  .bar-container { width: 170px; height: 16px; background: rgba(0,0,0,0.6); border: 2px solid #444; border-radius: 8px; margin-bottom: 5px; overflow: hidden; position: relative; }
+  .bar-fill { height: 100%; transition: width 0.1s linear; }
+  #hp-fill { background: #e63946; width: 100%; }
+  #mp-fill { background: #457b9d; width: 100%; }
+  .bar-label { position: absolute; width: 100%; top: 0; left: 0; font-size: 10px; text-align: center; line-height: 16px; font-weight: bold; text-shadow: 1px 1px 2px #000; }
+  #injury-status { font-size: 10px; font-weight: bold; color: #ff4d5a; display: none; text-shadow: 1px 1px 2px #000; }
+
+  #exit-btn { position: absolute; top: 10px; left: 190px; background: rgba(230, 57, 70, 0.85); border: 1.5px solid #ff4d5a; color: #fff; font-size: 0.75rem; font-weight: bold; padding: 4px 10px; border-radius: 5px; cursor: pointer; z-index: 25; pointer-events: auto; transition: 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+  #exit-btn:hover { background: #ff4d5a; transform: scale(1.05); }
+
+  #level-badge { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.75); border: 1.5px solid #ffb703; padding: 4px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; color: #ffd166; z-index: 15; text-shadow: 1px 1px 2px #000; pointer-events: none; }
+
+  #boss-hud { position: absolute; top: 38px; left: 50%; transform: translateX(-50%); width: 280px; display: none; z-index: 15; pointer-events: none; text-align: center; }
+  #boss-name { font-size: 0.75rem; font-weight: bold; color: #ff0054; text-transform: uppercase; letter-spacing: 1.5px; text-shadow: 0 0 6px rgba(255,0,84,0.8); margin-bottom: 2px; }
+  #boss-bar-container { width: 100%; height: 12px; background: rgba(0,0,0,0.85); border: 2px solid #ff0054; border-radius: 6px; overflow: hidden; box-shadow: 0 0 10px rgba(255,0,84,0.5); }
+  #boss-bar-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #ff0054, #ff5400); transition: width 0.1s linear; }
+
+  #minimap-container { position: absolute; top: 10px; right: 10px; width: 90px; height: 90px; border-radius: 50%; border: 2px solid #ffb703; background: rgba(15, 20, 28, 0.85); overflow: hidden; z-index: 15; pointer-events: none; }
+  #minimapCanvas { width: 100%; height: 100%; }
+
+  #crosshair { position: absolute; top: 50%; left: 50%; width: 6px; height: 6px; background: rgba(255,255,255,0.8); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 9; }
+  #top-stats { position: absolute; top: 105px; right: 15px; font-size: 0.85rem; font-weight: bold; color: #f1faee; text-shadow: 1px 1px 3px #000; z-index: 15; pointer-events: none; text-align: right; }
+  
+  #buff-box { position: absolute; top: 68px; left: 10px; display: flex; flex-direction: column; gap: 4px; z-index: 15; pointer-events: none; }
+  .buff-item { background: rgba(0,0,0,0.8); border: 1.5px solid #ffb703; color: #fff; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 0.72rem; }
+
+  #click-prompt { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); font-size: 0.75rem; color: #aaa; text-shadow: 1px 1px 2px #000; z-index: 8; pointer-events: none; }
+
+  #arrow-selector { position: absolute; top: 68px; right: 10px; display: none; flex-direction: column; gap: 4px; z-index: 20; }
+  .arrow-btn { background: rgba(0,0,0,0.75); border: 1.5px solid #666; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; cursor: pointer; }
+  .arrow-btn.selected { border-color: #ffb703; color: #ffb703; background: rgba(255, 183, 3, 0.2); }
+
+  #mobile-ui { position: absolute; inset: 0; z-index: 20; display: none; pointer-events: none; }
+  #touch-look-zone { position: absolute; right: 0; top: 0; width: 60%; height: 100%; pointer-events: auto; }
+  
+  #joystick-base { position: absolute; bottom: 25px; left: 25px; width: 110px; height: 110px; background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.25); border-radius: 50%; pointer-events: auto; }
+  #joystick-stick { position: absolute; top: 32px; left: 32px; width: 46px; height: 46px; background: rgba(255,183,3,0.7); border: 2px solid #ffb703; border-radius: 50%; }
+
+  #mobile-attack-btn { position: absolute; bottom: 35px; right: 30px; width: 75px; height: 75px; background: rgba(230, 57, 70, 0.8); border: 3px solid #ff4d5a; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 0.9rem; font-weight: bold; color: #fff; pointer-events: auto; box-shadow: 0 4px 15px rgba(230,57,70,0.5); }
+  #mobile-attack-btn:active { background: #ff4d5a; transform: scale(0.92); }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+  <canvas id="gameCanvas" width="600" height="400"></canvas>
+  <div id="crosshair"></div>
+
+  <button id="exit-btn" onclick="exitGame()">🚪 EXIT</button>
+
+  <div id="level-badge">LEVEL 1: Crypt Ruins</div>
+
+  <div id="boss-hud">
+    <div id="boss-name">BOSS: Crypt Abomination</div>
+    <div id="boss-bar-container">
+      <div id="boss-bar-fill"></div>
+    </div>
+  </div>
+
+  <div id="hud">
+    <div class="bar-container">
+      <div id="hp-fill" class="bar-fill"></div>
+      <div id="hp-label" class="bar-label">HP: 350 / 350</div>
+    </div>
+    <div class="bar-container" id="mp-container">
+      <div id="mp-fill" class="bar-fill"></div>
+      <div id="mp-label" class="bar-label">MP: 200 / 200</div>
+    </div>
+    <div id="injury-status">⚠️ INJURED: Slowed</div>
+  </div>
+
+  <div id="minimap-container">
+    <canvas id="minimapCanvas" width="90" height="90"></canvas>
+  </div>
+
+  <div id="buff-box"></div>
+
+  <div id="top-stats">
+    <div id="goal-status">Minions: <span id="quota-display" style="color:#ffd166">0 / 8</span></div>
+    <div>Total Kills: <span id="kill-display">0</span></div>
+  </div>
+  <div id="click-prompt">Click to lock mouse view</div>
+
+  <div id="arrow-selector">
+    <div class="arrow-btn selected" id="btn-arrow-1" onclick="setArrowType('normal')">STD</div>
+    <div class="arrow-btn" id="btn-arrow-2" onclick="setArrowType('fire')">FIRE</div>
+    <div class="arrow-btn" id="btn-arrow-3" onclick="setArrowType('ice')">ICE</div>
+  </div>
+
+  <div id="mobile-ui">
+    <div id="touch-look-zone"></div>
+    <div id="joystick-base">
+      <div id="joystick-stick"></div>
+    </div>
+    <div id="mobile-attack-btn">ATK</div>
+  </div>
+
+  <div id="device-select-screen" class="screen">
+    <h1>Select Platform</h1>
+    <p>Choose your playstyle for optimized controls.</p>
+    <div class="device-btn-group">
+      <div class="device-card active" onclick="chooseDevice('desktop', this)">
+        <div class="icon">🖥️</div>
+        <div class="title">Desktop</div>
+        <div style="font-size: 0.7rem; color: #888; margin-top:4px;">Mouse & WASD</div>
+      </div>
+      <div class="device-card" onclick="chooseDevice('mobile', this)">
+        <div class="icon">📱</div>
+        <div class="title">Mobile</div>
+        <div style="font-size: 0.7rem; color: #888; margin-top:4px;">Touch & Joystick</div>
+      </div>
+    </div>
+    <button class="btn" onclick="goToCharSelect()">Next</button>
+  </div>
+
+  <div id="char-select-screen" class="screen" style="display: none;">
+    <h1>Hero & Difficulty</h1>
+    <p>Conquer 10 levels, battle custom bosses & defeat 2 major Mega-Titans!</p>
+    
+    <div class="section-label">Hero Class</div>
+    <div class="card-container">
+      <div class="char-card active" onclick="selectClass('warrior', this)">
+        <h2>🗡️ Warrior</h2>
+        <div class="char-stat">HP: <span>350</span></div>
+        <div class="char-stat">Weapon: <span>Broadsword</span></div>
+        <div class="char-stat">Drop: <span>Spear (3x Reach)</span></div>
+      </div>
+      <div class="char-card" onclick="selectClass('wizard', this)">
+        <h2>🪄 Wizard</h2>
+        <div class="char-stat">HP: <span>150</span> | MP: <span>200</span></div>
+        <div class="char-stat">Weapon: <span>Arcane Staff</span></div>
+        <div class="char-stat">Drop: <span>Grand Wand</span></div>
+      </div>
+      <div class="char-card" onclick="selectClass('archer', this)">
+        <h2>🏹 Archer</h2>
+        <div class="char-stat">HP: <span>200</span></div>
+        <div class="char-stat">Weapon: <span>Recurve Bow</span></div>
+        <div class="char-stat">Drop: <span>Triple Quiver</span></div>
+      </div>
+    </div>
+
+    <div class="section-label">Horde Speed</div>
+    <div class="speed-container">
+      <div class="speed-btn" onclick="selectSpeed('slow', 0.45, 95, this)">🐌 Slow</div>
+      <div class="speed-btn active" onclick="selectSpeed('medium', 0.7, 70, this)">🚶 Medium</div>
+      <div class="speed-btn" onclick="selectSpeed('faster', 1.0, 50, this)">⚡ Fast</div>
+    </div>
+
+    <button class="btn" onclick="startGame()">Start Campaign</button>
+  </div>
+
+  <div id="level-clear-screen" class="screen" style="display: none;">
+    <h1 style="color: #52b788;">LEVEL CLEARED!</h1>
+    <p id="level-clear-desc">The dungeon area was purified.</p>
+    <button class="btn" onclick="nextLevel()">Enter Next Portal</button>
+  </div>
+
+  <div id="victory-screen" class="screen" style="display: none;">
+    <h1 style="color: #ffd166;">CAMPAIGN VICTORY!</h1>
+    <p>You have conquered all 10 bosses and slain the Primordial Necro-Titan!</p>
+    <button class="btn" onclick="resetToMenu()">Play Again</button>
+  </div>
+
+  <div id="game-over-screen" class="screen" style="display: none;">
+    <h1 style="color: #e63946;">YOU DIED</h1>
+    <p id="survival-stats">You were slaughtered by the horde.</p>
+    <button class="btn" onclick="resetToMenu()">Select Hero</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const mapCanvas = document.getElementById('minimapCanvas');
+const mapCtx = mapCanvas.getContext('2d');
+
+const MAP_SIZE = 16;
+const MAP = [
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,1,1,0,0,0,0,0,0,1,1,0,0,1],
+  [1,0,0,1,1,0,0,0,0,0,0,1,1,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,1,1,0,0,0,0,0,0,1,1,0,0,1],
+  [1,0,0,1,1,0,0,0,0,0,0,1,1,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+];
+
+const ZOMBIE_INFO = {
+  'walker': { name: "Rotting Walker", color: "#52b788" },
+  'crawler': { name: "Viper Crawler", color: "#74c69d" },
+  'ghoul': { name: "Blood Ghoul", color: "#ff4d6d" },
+  'spitter': { name: "Toxic Spitter", color: "#9ef01a" },
+  'wight': { name: "Frost Wight", color: "#48cae4" },
+  'golem': { name: "Bone Golem", color: "#e0e1dd" },
+  'lurker': { name: "Shadow Lurker", color: "#c77dff" },
+  'stalker': { name: "Inferno Stalker", color: "#ff5400" },
+  'overlord': { name: "Undead Overlord", color: "#ffd166" },
+  'brute': { name: "Iron Brute", color: "#2d6a4f" },
+  'boss_abomination': { name: "★ Crypt Abomination ★", color: "#ff0054" },
+  'boss_mother': { name: "★ Plague Mother ★", color: "#c77dff" },
+  'boss_leviathan': { name: "★ Gore Leviathan ★", color: "#ff0054" },
+  'boss_executioner': { name: "★ Crimson Executioner ★", color: "#e63946" },
+  'mega_behemoth': { name: "★★★ Chem-Toxic Behemoth ★★★", color: "#70e000" },
+  'boss_biotitan': { name: "★ Acidic Bio-Titan ★", color: "#9ef01a" },
+  'boss_frostlord': { name: "★ Glacial Frost Lord ★", color: "#00b4d8" },
+  'boss_phantom': { name: "★ Abyss Phantom ★", color: "#b5179e" },
+  'boss_juggernaut': { name: "★ Hellfire Juggernaut ★", color: "#f77f00" },
+  'mega_necrotitan': { name: "★★★ Primordial Necro-Titan ★★★", color: "#ffd166" }
+};
+
+const LEVELS = [
+  { level: 1, name: "Crypt Ruins", quota: 8, types: ["walker"], bossType: "boss_abomination", bossName: "Crypt Abomination", terrain: { wallBase: '#495057', brickCol: [70, 74, 80], floor: ['#151c14', '#202a1e', '#2c3a2a'], ceil: '#040608' } },
+  { level: 2, name: "Haunted Outskirts", quota: 10, types: ["walker", "crawler"], bossType: "boss_mother", bossName: "Plague Mother", terrain: { wallBase: '#3d405b', brickCol: [60, 65, 85], floor: ['#19231a', '#243325', '#2f4331'], ceil: '#05070e' } },
+  { level: 3, name: "Blood Catacombs", quota: 12, types: ["crawler", "ghoul"], bossType: "boss_leviathan", bossName: "Gore Leviathan", terrain: { wallBase: '#590d22', brickCol: [90, 20, 35], floor: ['#2b0910', '#380d15', '#48111b'], ceil: '#140306' } },
+  { level: 4, name: "Crimson Hall", quota: 14, types: ["ghoul", "brute"], bossType: "boss_executioner", bossName: "Crimson Executioner", terrain: { wallBase: '#800f2f', brickCol: [110, 25, 45], floor: ['#38040e', '#4f0614', '#640d14'], ceil: '#1b0206' } },
+  { level: 5, name: "Toxic Core (MEGA BOSS)", quota: 16, types: ["spitter", "crawler"], bossType: "mega_behemoth", bossName: "★ Chem-Toxic Behemoth ★", terrain: { wallBase: '#2d6a4f', brickCol: [40, 95, 65], floor: ['#081c15', '#1b4332', '#2d6a4f'], ceil: '#030c08' } },
+  { level: 6, name: "Acid Chamber", quota: 18, types: ["spitter", "golem"], bossType: "boss_biotitan", bossName: "Acidic Bio-Titan", terrain: { wallBase: '#40916c', brickCol: [55, 120, 85], floor: ['#0d2818', '#164426', '#216337'], ceil: '#05110a' } },
+  { level: 7, name: "Frozen Underworld", quota: 20, types: ["wight", "lurker"], bossType: "boss_frostlord", bossName: "Glacial Frost Lord", terrain: { wallBase: '#0077b6', brickCol: [30, 110, 160], floor: ['#03045e', '#023e8a', '#0077b6'], ceil: '#010b14' } },
+  { level: 8, name: "Glacial Abyss", quota: 22, types: ["wight", "stalker"], bossType: "boss_phantom", bossName: "Abyss Phantom", terrain: { wallBase: '#0096c7', brickCol: [45, 140, 190], floor: ['#012a4a', '#013a63', '#01497c'], ceil: '#020f1a' } },
+  { level: 9, name: "Infernal Crucible", quota: 24, types: ["stalker", "golem", "lurker"], bossType: "boss_juggernaut", bossName: "Hellfire Juggernaut", terrain: { wallBase: '#e85d04', brickCol: [180, 70, 10], floor: ['#370617', '#6a040f', '#9d0208'], ceil: '#1a0408' } },
+  { level: 10, name: "Obsidian Throne (FINAL BOSS)", quota: 25, types: ["overlord", "stalker", "golem"], bossType: "mega_necrotitan", bossName: "★★★ Primordial Necro-Titan ★★★", terrain: { wallBase: '#10002b', brickCol: [70, 20, 100], floor: ['#240046', '#3c096c', '#5a189a'], ceil: '#080010' } }
+];
+
+const TEX_SIZE = 64;
+const wallTextureCanvas = document.createElement('canvas');
+wallTextureCanvas.width = TEX_SIZE;
+wallTextureCanvas.height = TEX_SIZE;
+const tCtx = wallTextureCanvas.getContext('2d');
+
+function updateWallTexture(theme) {
+  tCtx.fillStyle = theme.wallBase;
+  tCtx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
+
+  const rows = 4;
+  const rowHeight = TEX_SIZE / rows;
+  for (let r = 0; r < rows; r++) {
+    const y = r * rowHeight;
+    const cols = 2;
+    const colWidth = TEX_SIZE / cols;
+    const offset = (r % 2) * (colWidth / 2);
+
+    for (let c = -1; c <= cols; c++) {
+      const x = c * colWidth + offset;
+      const [cr, cg, cb] = theme.brickCol;
+      const variation = Math.floor(Math.sin(r * 3 + c * 7) * 15);
+      tCtx.fillStyle = `rgb(${Math.min(255, Math.max(0, cr + variation))}, ${Math.min(255, Math.max(0, cg + variation))}, ${Math.min(255, Math.max(0, cb + variation))})`;
+      tCtx.fillRect(x + 2, y + 2, colWidth - 4, rowHeight - 4);
+
+      tCtx.fillStyle = 'rgba(0,0,0,0.4)';
+      tCtx.fillRect(x + 5, y + 5, colWidth - 10, 1);
+      
+      tCtx.strokeStyle = 'rgba(0,0,0,0.6)';
+      tCtx.lineWidth = 1.5;
+      tCtx.strokeRect(x, y, colWidth, rowHeight);
+    }
+  }
+}
+
+let deviceMode = 'desktop';
+let chosenClass = 'warrior';
+let arrowType = 'normal';
+let gameState = 'menu';
+let currentLevelIndex = 0;
+let levelKills = 0;
+let totalKills = 0;
+let bossSpawned = false;
+let currentBoss = null;
+let zombieSpeedMultiplier = 0.7;
+let baseSpawnInterval = 70;
+
+const keys = {};
+
+const joystick = { active: false, touchId: null, startX: 0, startY: 0, dx: 0, dy: 0 };
+const touchLook = { active: false, touchId: null, lastX: 0 };
+
+function chooseDevice(mode, el) {
+  deviceMode = mode;
+  document.querySelectorAll('.device-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function goToCharSelect() {
+  document.getElementById('device-select-screen').style.display = 'none';
+  document.getElementById('char-select-screen').style.display = 'flex';
+}
+
+function selectClass(type, el) {
+  chosenClass = type;
+  document.querySelectorAll('.char-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function selectSpeed(name, multiplier, interval, el) {
+  zombieSpeedMultiplier = multiplier;
+  baseSpawnInterval = interval;
+  document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function setArrowType(type) {
+  arrowType = type;
+  document.getElementById('btn-arrow-1').className = 'arrow-btn ' + (type === 'normal' ? 'selected' : '');
+  document.getElementById('btn-arrow-2').className = 'arrow-btn ' + (type === 'fire' ? 'selected' : '');
+  document.getElementById('btn-arrow-3').className = 'arrow-btn ' + (type === 'ice' ? 'selected' : '');
+}
+
+function exitGame() {
+  if (document.exitPointerLock) document.exitPointerLock();
+  gameState = 'menu';
+  document.getElementById('device-select-screen').style.display = 'none';
+  document.getElementById('game-over-screen').style.display = 'none';
+  document.getElementById('level-clear-screen').style.display = 'none';
+  document.getElementById('victory-screen').style.display = 'none';
+  document.getElementById('char-select-screen').style.display = 'flex';
+  document.getElementById('arrow-selector').style.display = 'none';
+  document.getElementById('buff-box').innerHTML = '';
+  document.getElementById('mobile-ui').style.display = 'none';
+  document.getElementById('exit-btn').style.display = 'none';
+  document.getElementById('boss-hud').style.display = 'none';
+}
+
+function resetToMenu() {
+  exitGame();
+}
+
+// Single Press / Click Attack Trigger Logic
+canvas.addEventListener('click', () => {
+  if (gameState === 'playing' && deviceMode === 'desktop') canvas.requestPointerLock();
+});
+
+document.addEventListener('mousemove', e => {
+  if (document.pointerLockElement === canvas && gameState === 'playing') {
+    player.angle += e.movementX * 0.0032;
+  }
+});
+
+// Single attack per click on Desktop
+window.addEventListener('mousedown', (e) => {
+  if (deviceMode === 'desktop' && gameState === 'playing' && e.button === 0) {
+    if (player) player.triggerAttack();
+  }
+});
+
+window.addEventListener('keydown', e => {
+  keys[e.key.toLowerCase()] = true;
+  if (chosenClass === 'archer') {
+    if (e.key === '1') setArrowType('normal');
+    if (e.key === '2') setArrowType('fire');
+    if (e.key === '3') setArrowType('ice');
+  }
+});
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+const joyBase = document.getElementById('joystick-base');
+const joyStick = document.getElementById('joystick-stick');
+const touchLookZone = document.getElementById('touch-look-zone');
+const attackBtn = document.getElementById('mobile-attack-btn');
+
+// Single attack per tap on Mobile
+attackBtn.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (gameState === 'playing' && player) {
+    player.triggerAttack();
+  }
+});
+
+joyBase.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const touch = e.changedTouches[0];
+  joystick.active = true;
+  joystick.touchId = touch.identifier;
+  const rect = joyBase.getBoundingClientRect();
+  joystick.startX = rect.left + rect.width / 2;
+  joystick.startY = rect.top + rect.height / 2;
+});
+
+window.addEventListener('touchmove', (e) => {
+  for (let i = 0; i < e.touches.length; i++) {
+    const touch = e.touches[i];
+    if (joystick.active && touch.identifier === joystick.touchId) {
+      let dx = touch.clientX - joystick.startX;
+      let dy = touch.clientY - joystick.startY;
+      const maxDist = 38;
+      const dist = Math.hypot(dx, dy);
+      if (dist > maxDist) {
+        dx = (dx / dist) * maxDist;
+        dy = (dy / dist) * maxDist;
+      }
+      joystick.dx = dx / maxDist;
+      joystick.dy = dy / maxDist;
+      joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
+    } else if (touchLook.active && touch.identifier === touchLook.touchId) {
+      const deltaX = touch.clientX - touchLook.lastX;
+      player.angle += deltaX * 0.007;
+      touchLook.lastX = touch.clientX;
+    }
+  }
+});
+
+window.addEventListener('touchend', (e) => {
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const touch = e.changedTouches[i];
+    if (touch.identifier === joystick.touchId) {
+      joystick.active = false;
+      joystick.dx = 0;
+      joystick.dy = 0;
+      joyStick.style.transform = `translate(0px, 0px)`;
+    }
+    if (touch.identifier === touchLook.touchId) {
+      touchLook.active = false;
+    }
+  }
+});
+
+touchLookZone.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const touch = e.changedTouches[0];
+  touchLook.active = true;
+  touchLook.touchId = touch.identifier;
+  touchLook.lastX = touch.clientX;
+});
+
+let player;
+let projectiles = [];
+let enemyProjectiles = [];
+let zombies = [];
+let drops = [];
+let spawnTimer = 0;
+let zBuffer = new Array(canvas.width).fill(0);
+
+class PlayerFPS {
+  constructor(heroClass) {
+    this.x = 8.0;
+    this.y = 8.0;
+    this.angle = 0;
+    this.heroClass = heroClass;
+    this.baseSpeed = 0.065;
+    this.attackCooldown = 0;
+    this.swingAnim = 0;
+    this.buffTimer = 0;
+    this.speedTimer = 0;
+    this.shieldTimer = 0;
+    this.freezeTimer = 0;
+    this.bobTimer = 0;
+
+    if (heroClass === 'warrior') {
+      this.maxHp = 350; this.hp = 350;
+      this.maxMp = 0; this.mp = 0;
+    } else if (heroClass === 'wizard') {
+      this.maxHp = 150; this.hp = 150;
+      this.maxMp = 200; this.mp = 200;
+    } else if (heroClass === 'archer') {
+      this.maxHp = 200; this.hp = 200;
+      this.maxMp = 0; this.mp = 0;
+    }
+  }
+
+  update() {
+    const hpRatio = Math.max(0.05, this.hp / this.maxHp);
+    let speedMult = this.speedTimer > 0 ? 1.5 : 1.0;
+    if (this.freezeTimer > 0) { speedMult *= 0.35; this.freezeTimer--; }
+    const currentSpeed = this.baseSpeed * (0.55 + 0.45 * hpRatio) * speedMult;
+
+    const injuryEl = document.getElementById('injury-status');
+    if (hpRatio < 0.5 && this.speedTimer <= 0) {
+      injuryEl.style.display = 'block';
+      injuryEl.innerText = `⚠️ INJURED: ${Math.round((0.55 + 0.45 * hpRatio) * 100)}% Speed`;
+    } else {
+      injuryEl.style.display = 'none';
+    }
+
+    let dx = 0, dy = 0;
+    const cos = Math.cos(this.angle);
+    const sin = Math.sin(this.angle);
+
+    let isMoving = false;
+    if (keys['w'] || keys['arrowup']) { dx += cos * currentSpeed; dy += sin * currentSpeed; isMoving = true; }
+    if (keys['s'] || keys['arrowdown']) { dx -= cos * currentSpeed; dy -= sin * currentSpeed; isMoving = true; }
+    if (keys['a']) { dx += sin * currentSpeed; dy -= cos * currentSpeed; isMoving = true; }
+    if (keys['d']) { dx -= sin * currentSpeed; dy += cos * currentSpeed; isMoving = true; }
+    if (keys['arrowleft']) this.angle -= 0.04;
+    if (keys['arrowright']) this.angle += 0.04;
+
+    if (joystick.active) {
+      const joyForward = -joystick.dy;
+      const joyStrafe = joystick.dx;
+      dx += (cos * joyForward - sin * joyStrafe) * currentSpeed;
+      dy += (sin * joyForward + cos * joyStrafe) * currentSpeed;
+      if (Math.hypot(joystick.dx, joystick.dy) > 0.1) isMoving = true;
+    }
+
+    if (isMoving) this.bobTimer += 0.18;
+    else this.bobTimer += 0.04;
+
+    if (MAP[Math.floor(this.y)][Math.floor(this.x + dx * 1.5)] === 0) this.x += dx;
+    if (MAP[Math.floor(this.y + dy * 1.5)][Math.floor(this.x)] === 0) this.y += dy;
+
+    if (this.buffTimer > 0) this.buffTimer--;
+    if (this.speedTimer > 0) this.speedTimer--;
+    if (this.shieldTimer > 0) this.shieldTimer--;
+
+    const buffBox = document.getElementById('buff-box');
+    let buffHTML = '';
+    if (this.buffTimer > 0) buffHTML += `<div class="buff-item" style="border-color:#ffd166; color:#ffd166;">⚡ WEAPON BUFF: ${(this.buffTimer/60).toFixed(1)}s</div>`;
+    if (this.speedTimer > 0) buffHTML += `<div class="buff-item" style="border-color:#52b788; color:#52b788;">🪶 SPEED BOOST: ${(this.speedTimer/60).toFixed(1)}s</div>`;
+    if (this.shieldTimer > 0) buffHTML += `<div class="buff-item" style="border-color:#48cae4; color:#48cae4;">🛡️ INVULNERABLE: ${(this.shieldTimer/60).toFixed(1)}s</div>`;
+    buffBox.innerHTML = buffHTML;
+
+    if (this.heroClass === 'wizard' && this.mp < this.maxMp) {
+      const regen = (this.buffTimer > 0) ? 0.8 : 0.4;
+      this.mp = Math.min(this.maxMp, this.mp + regen);
+    }
+
+    if (this.attackCooldown > 0) this.attackCooldown--;
+    if (this.swingAnim > 0) this.swingAnim -= 0.12;
+  }
+
+  // Single-execution attack routine called once per tap/click
+  triggerAttack() {
+    if (this.attackCooldown > 0) return;
+
+    const isBuffed = this.buffTimer > 0;
+    this.swingAnim = 1.0;
+
+    if (this.heroClass === 'warrior') {
+      this.attackCooldown = 18;
+      const reach = isBuffed ? 4.5 : 1.6;
+      const damage = isBuffed ? 75 : 45;
+
+      zombies.forEach(z => {
+        const dx = z.x - this.x;
+        const dy = z.y - this.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist <= reach) {
+          let enemyAngle = Math.atan2(dy, dx) - this.angle;
+          while (enemyAngle < -Math.PI) enemyAngle += Math.PI * 2;
+          while (enemyAngle > Math.PI) enemyAngle -= Math.PI * 2;
+          if (Math.abs(enemyAngle) < 0.45) {
+            z.hp -= damage;
+            z.x += Math.cos(this.angle) * 0.4;
+            z.y += Math.sin(this.angle) * 0.4;
+          }
+        }
+      });
+    } else if (this.heroClass === 'wizard') {
+      const manaCost = 25;
+      if (this.mp >= manaCost) {
+        this.mp -= manaCost;
+        this.attackCooldown = isBuffed ? 12 : 18;
+        let projType = isBuffed ? 'bigMagic' : 'magic';
+        let color = isBuffed ? '#ff0054' : '#c77dff';
+        let damage = isBuffed ? 70 : 40;
+        let speed = 0.22;
+        projectiles.push(new ProjectileFPS(this.x, this.y, this.angle, speed, damage, projType, color, false));
+      }
+    } else if (this.heroClass === 'archer') {
+      this.attackCooldown = 15;
+      let color = '#f4a261';
+      let damage = 25;
+      if (arrowType === 'fire') { color = '#e76f51'; damage = 30; }
+      if (arrowType === 'ice') { color = '#48cae4'; damage = 20; }
+
+      if (isBuffed) {
+        projectiles.push(new ProjectileFPS(this.x, this.y, this.angle - 0.12, 0.28, damage, arrowType, color, false));
+        projectiles.push(new ProjectileFPS(this.x, this.y, this.angle, 0.28, damage, arrowType, color, false));
+        projectiles.push(new ProjectileFPS(this.x, this.y, this.angle + 0.12, 0.28, damage, arrowType, color, false));
+      } else {
+        projectiles.push(new ProjectileFPS(this.x, this.y, this.angle, 0.28, damage, arrowType, color, false));
+      }
+    }
+  }
+}
+
+class ProjectileFPS {
+  constructor(x, y, angle, speed, damage, type, color, isHostile = false) {
+    this.x = x;
+    this.y = y;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+    this.damage = damage;
+    this.type = type;
+    this.color = color;
+    this.isHostile = isHostile;
+    this.dead = false;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    if (MAP[Math.floor(this.y)] && MAP[Math.floor(this.y)][Math.floor(this.x)] === 1) {
+      this.dead = true;
+    }
+    if (this.isHostile && Math.hypot(player.x - this.x, player.y - this.y) < 0.6) {
+      if (player.shieldTimer <= 0) {
+        player.hp -= this.damage;
+        if (this.type === 'frost') player.freezeTimer = 90;
+      }
+      this.dead = true;
+    }
+  }
+}
+
+class DropFPS {
+  constructor(x, y, dropType, heroClass) {
+    this.x = x;
+    this.y = y;
+    this.dropType = dropType;
+    this.heroClass = heroClass;
+    this.life = 450;
+    this.bobOffset = Math.random() * 10;
+  }
+
+  update() {
+    this.life--;
+    const dist = Math.hypot(player.x - this.x, player.y - this.y);
+    if (dist < 0.8) {
+      if (this.dropType === 'buff') {
+        player.buffTimer = 300;
+      } else if (this.dropType === 'health') {
+        player.hp = Math.min(player.maxHp, player.hp + 60);
+      } else if (this.dropType === 'mana') {
+        player.mp = Math.min(player.maxMp, player.mp + 80);
+      } else if (this.dropType === 'speed') {
+        player.speedTimer = 360;
+      } else if (this.dropType === 'shield') {
+        player.shieldTimer = 300;
+      } else if (this.dropType === 'freeze') {
+        zombies.forEach(z => { z.slowTimer = 240; });
+      } else if (this.dropType === 'nuke') {
+        zombies.forEach(z => {
+          if (!z.isBoss) z.hp = 0;
+          else z.hp -= 200;
+        });
+      }
+      this.life = 0;
+    }
+  }
+
+  drawGraphic(screenX, screenY, size, dist) {
+    ctx.save();
+    const time = Date.now() / 150 + this.bobOffset;
+    const hoverY = screenY + Math.sin(time) * 8;
+    const r = Math.max(6, size * 0.45);
+
+    if (this.dropType === 'health') {
+      const glow = ctx.createRadialGradient(screenX, hoverY, r * 0.2, screenX, hoverY, r * 2.2);
+      glow.addColorStop(0, 'rgba(230, 57, 70, 0.85)');
+      glow.addColorStop(1, 'rgba(230, 57, 70, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(screenX, hoverY, r * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ff4d6d';
+      ctx.beginPath();
+      ctx.arc(screenX, hoverY, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#6c584c';
+      ctx.fillRect(screenX - r * 0.3, hoverY - r * 1.3, r * 0.6, r * 0.35);
+
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(screenX - 1.5, hoverY - r * 0.4, 3, r * 0.8);
+      ctx.fillRect(screenX - r * 0.4, hoverY - 1.5, r * 0.8, 3);
+
+    } else if (this.dropType === 'mana') {
+      const glow = ctx.createRadialGradient(screenX, hoverY, r * 0.2, screenX, hoverY, r * 2.2);
+      glow.addColorStop(0, 'rgba(69, 123, 157, 0.85)');
+      glow.addColorStop(1, 'rgba(69, 123, 157, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(screenX, hoverY, r * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#00b4d8';
+      ctx.beginPath();
+      ctx.arc(screenX, hoverY, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.max(8, Math.floor(r * 1.1))}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('MP', screenX, hoverY);
+
+    } else if (this.dropType === 'speed') {
+      const glow = ctx.createRadialGradient(screenX, hoverY, r * 0.2, screenX, hoverY, r * 2.2);
+      glow.addColorStop(0, 'rgba(82, 183, 136, 0.85)');
+      glow.addColorStop(1, 'rgba(82, 183, 136, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(screenX, hoverY, r * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#52b788';
+      ctx.beginPath();
+      ctx.ellipse(screenX, hoverY, r * 0.6, r * 1.2, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.max(8, Math.floor(r * 1.1))}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🪶', screenX, hoverY);
+
+    } else if (this.dropType === 'shield') {
+      const glow = ctx.createRadialGradient(screenX, hoverY, r * 0.2, screenX, hoverY, r * 2.2);
+      glow.addColorStop(0, 'rgba(72, 202, 228, 0.85)');
+      glow.addColorStop(1, 'rgba(72, 202, 228, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(screenX, hoverY, r * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#48cae4';
+      ctx.beginPath();
+      ctx.arc(screenX, hoverY, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.max(8, Math.floor(r * 1.1))}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🛡️', screenX, hoverY);
+
+    } else if (this.dropType === 'freeze') {
+      const glow = ctx.createRadialGradient(screenX, hoverY, r * 0.2, screenX, hoverY, r * 2.2);
+      glow.addColorStop(0, 'rgba(202, 240, 248, 0.9)');
+      glow.addColorStop(1, 'rgba(0, 119, 182, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(screenX, hoverY, r * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#90e0ef';
+      ctx.beginPath();
+      ctx.arc(screenX, hoverY, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#03045e';
+      ctx.font = `bold ${Math.max(8, Math.floor(r * 1.1))}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('❄️', screenX, hoverY);
+
+    } else if (this.dropType === 'nuke') {
+      const glow = ctx.createRadialGradient(screenX, hoverY, r * 0.2, screenX, hoverY, r * 2.2);
+      glow.addColorStop(0, 'rgba(247, 127, 0, 0.9)');
+      glow.addColorStop(1, 'rgba(214, 40, 40, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(screenX, hoverY, r * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#d62828';
+      ctx.beginPath();
+      ctx.arc(screenX, hoverY, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fcbf49';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.max(8, Math.floor(r * 1.1))}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('💣', screenX, hoverY);
+
+    } else {
+      const glow = ctx.createRadialGradient(screenX, hoverY, r * 0.3, screenX, hoverY, r * 2.5);
+      glow.addColorStop(0, 'rgba(255, 209, 102, 0.9)');
+      glow.addColorStop(1, 'rgba(255, 183, 3, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(screenX, hoverY, r * 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#ffd166';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(screenX, hoverY, r * 1.5, r * 0.7, time * 0.5, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffb703';
+      ctx.beginPath();
+      ctx.moveTo(screenX, hoverY - r * 1.2);
+      ctx.lineTo(screenX + r * 1.1, hoverY);
+      ctx.lineTo(screenX, hoverY + r * 1.2);
+      ctx.lineTo(screenX - r * 1.1, hoverY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#111';
+      ctx.font = `bold ${Math.max(8, Math.floor(r * 1.1))}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const icon = this.heroClass === 'warrior' ? '🗡️' : (this.heroClass === 'wizard' ? '🪄' : '🏹');
+      ctx.fillText(icon, screenX, hoverY);
+    }
+
+    ctx.restore();
+  }
+}
+
+class ZombieFPS {
+  constructor(type, levelIndex, isBoss = false) {
+    this.type = type;
+    this.levelIndex = levelIndex;
+    this.isBoss = isBoss;
+
+    let validSpawn = false;
+    let attempts = 0;
+    this.x = 2.5;
+    this.y = 2.5;
+
+    while (!validSpawn && attempts < 50) {
+      attempts++;
+      let rx = 1.5 + Math.random() * (MAP_SIZE - 3);
+      let ry = 1.5 + Math.random() * (MAP_SIZE - 3);
+      let mapX = Math.floor(rx);
+      let mapY = Math.floor(ry);
+
+      if (MAP[mapY] && MAP[mapY][mapX] === 0) {
+        let distToPlayer = player ? Math.hypot(player.x - rx, player.y - ry) : 10;
+        if (distToPlayer > 4.0) {
+          this.x = rx;
+          this.y = ry;
+          validSpawn = true;
+        }
+      }
+    }
+
+    this.slowTimer = 0;
+    this.burnTimer = 0;
+    this.animTimer = Math.random() * 100;
+    this.attackTimer = 0;
+
+    const levelScale = 1.0 + (levelIndex * 0.18);
+    let baseSpeed = 0.018;
+
+    if (type === 'crawler') {
+      baseSpeed = 0.027; this.maxHp = Math.round(65 * levelScale); this.damage = Math.round(7 * levelScale); this.scale = 0.65;
+    } else if (type === 'brute') {
+      baseSpeed = 0.011; this.maxHp = Math.round(260 * levelScale); this.damage = Math.round(18 * levelScale); this.scale = 1.35;
+    } else if (type === 'ghoul') {
+      baseSpeed = 0.024; this.maxHp = Math.round(120 * levelScale); this.damage = Math.round(12 * levelScale); this.scale = 0.95;
+    } else if (type === 'spitter') {
+      baseSpeed = 0.019; this.maxHp = Math.round(140 * levelScale); this.damage = Math.round(14 * levelScale); this.scale = 1.05;
+    } else if (type === 'wight') {
+      baseSpeed = 0.022; this.maxHp = Math.round(170 * levelScale); this.damage = Math.round(16 * levelScale); this.scale = 1.1;
+    } else if (type === 'golem') {
+      baseSpeed = 0.010; this.maxHp = Math.round(380 * levelScale); this.damage = Math.round(24 * levelScale); this.scale = 1.45;
+    } else if (type === 'lurker') {
+      baseSpeed = 0.029; this.maxHp = Math.round(160 * levelScale); this.damage = Math.round(19 * levelScale); this.scale = 0.85;
+    } else if (type === 'stalker') {
+      baseSpeed = 0.026; this.maxHp = Math.round(220 * levelScale); this.damage = Math.round(22 * levelScale); this.scale = 1.15;
+    } else if (type === 'overlord') {
+      baseSpeed = 0.014; this.maxHp = 950; this.damage = 38; this.scale = 1.7;
+    } else if (type === 'boss_abomination') {
+      baseSpeed = 0.016; this.maxHp = 450; this.damage = 25; this.scale = 1.5;
+    } else if (type === 'boss_mother') {
+      baseSpeed = 0.017; this.maxHp = 600; this.damage = 22; this.scale = 1.55;
+    } else if (type === 'boss_leviathan') {
+      baseSpeed = 0.022; this.maxHp = 800; this.damage = 30; this.scale = 1.6;
+    } else if (type === 'boss_executioner') {
+      baseSpeed = 0.018; this.maxHp = 1050; this.damage = 35; this.scale = 1.65;
+    } else if (type === 'mega_behemoth') {
+      baseSpeed = 0.013; this.maxHp = 2200; this.damage = 45; this.scale = 2.0;
+    } else if (type === 'boss_biotitan') {
+      baseSpeed = 0.015; this.maxHp = 1350; this.damage = 38; this.scale = 1.7;
+    } else if (type === 'boss_frostlord') {
+      baseSpeed = 0.019; this.maxHp = 1600; this.damage = 42; this.scale = 1.75;
+    } else if (type === 'boss_phantom') {
+      baseSpeed = 0.025; this.maxHp = 1850; this.damage = 46; this.scale = 1.7;
+    } else if (type === 'boss_juggernaut') {
+      baseSpeed = 0.017; this.maxHp = 2200; this.damage = 52; this.scale = 1.85;
+    } else if (type === 'mega_necrotitan') {
+      baseSpeed = 0.014; this.maxHp = 4000; this.damage = 65; this.scale = 2.2;
+    } else {
+      baseSpeed = 0.018; this.maxHp = Math.round(110 * levelScale); this.damage = Math.round(9 * levelScale); this.scale = 1.0;
+    }
+
+    this.hp = this.maxHp;
+    this.speed = baseSpeed * zombieSpeedMultiplier;
+  }
+
+  update() {
+    this.animTimer += 0.15;
+    this.attackTimer++;
+
+    if (this.burnTimer > 0) {
+      if (this.burnTimer % 20 === 0) this.hp -= 4;
+      this.burnTimer--;
+    }
+
+    let effectiveSpeed = this.speed;
+    if (this.slowTimer > 0) {
+      effectiveSpeed *= 0.25;
+      this.slowTimer--;
+    }
+
+    const angle = Math.atan2(player.y - this.y, player.x - this.x);
+
+    if (this.isBoss && this.attackTimer % 110 === 0) {
+      if (this.type === 'mega_behemoth' || this.type === 'boss_biotitan') {
+        enemyProjectiles.push(new ProjectileFPS(this.x, this.y, angle, 0.14, 25, 'toxic', '#70e000', true));
+      } else if (this.type === 'boss_frostlord') {
+        enemyProjectiles.push(new ProjectileFPS(this.x, this.y, angle, 0.16, 28, 'frost', '#90e0ef', true));
+      } else if (this.type === 'boss_juggernaut') {
+        enemyProjectiles.push(new ProjectileFPS(this.x, this.y, angle, 0.15, 35, 'fire', '#ff5400', true));
+      } else if (this.type === 'mega_necrotitan') {
+        enemyProjectiles.push(new ProjectileFPS(this.x, this.y, angle - 0.25, 0.16, 40, 'void', '#7209b7', true));
+        enemyProjectiles.push(new ProjectileFPS(this.x, this.y, angle, 0.16, 40, 'void', '#7209b7', true));
+        enemyProjectiles.push(new ProjectileFPS(this.x, this.y, angle + 0.25, 0.16, 40, 'void', '#7209b7', true));
+      } else if (this.type === 'boss_mother' && zombies.length < 12) {
+        zombies.push(new ZombieFPS('crawler', this.levelIndex, false));
+      } else if (this.type === 'boss_phantom') {
+        this.x = 2.0 + Math.random() * (MAP_SIZE - 4);
+        this.y = 2.0 + Math.random() * (MAP_SIZE - 4);
+      }
+    }
+
+    let stepX = Math.cos(angle) * effectiveSpeed;
+    let stepY = Math.sin(angle) * effectiveSpeed;
+
+    const margin = 0.35;
+    let canMoveX = MAP[Math.floor(this.y)][Math.floor(this.x + stepX + Math.sign(stepX) * margin)] === 0;
+    let canMoveY = MAP[Math.floor(this.y + stepY + Math.sign(stepY) * margin)][Math.floor(this.x)] === 0;
+
+    if (canMoveX) this.x += stepX;
+    if (canMoveY) this.y += stepY;
+
+    if (!canMoveX && canMoveY) {
+      this.y += Math.sign(stepY || 1) * effectiveSpeed * 0.8;
+    } else if (!canMoveY && canMoveX) {
+      this.x += Math.sign(stepX || 1) * effectiveSpeed * 0.8;
+    }
+
+    const dist = Math.hypot(player.x - this.x, player.y - this.y);
+    if (dist < 0.65) {
+      if (player.shieldTimer <= 0) {
+        player.hp -= this.damage * 0.025;
+      }
+    }
+  }
+
+  draw3DForm(screenX, screenY, width, height, brightness) {
+    ctx.save();
+    ctx.translate(screenX, screenY);
+
+    const isBurning = this.burnTimer > 0;
+    const isFrozen = this.slowTimer > 0;
+    const t = this.type;
+    const walkBob = Math.sin(this.animTimer * 2) * (height * 0.04);
+    const limbSwing = Math.sin(this.animTimer * 2);
+
+    const w = width;
+    const h = height;
+
+    if (t === 'crawler' || t === 'boss_mother') {
+      ctx.fillStyle = isBurning ? '#e76f51' : (isFrozen ? '#90e0ef' : (t === 'boss_mother' ? '#7b2cbf' : '#2b580c'));
+      ctx.beginPath();
+      ctx.ellipse(0, h * 0.42 + walkBob, w * 0.35, h * 0.18, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = isBurning ? '#ffb703' : (isFrozen ? '#caf0f8' : (t === 'boss_mother' ? '#e0aaff' : '#3f681c'));
+      ctx.beginPath();
+      ctx.arc(0, h * 0.48 + walkBob, w * 0.18, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = isBurning ? '#ff0033' : '#aacc00';
+      ctx.beginPath();
+      ctx.arc(-w * 0.09, h * 0.46 + walkBob, 2.5, 0, Math.PI * 2);
+      ctx.arc(w * 0.09, h * 0.46 + walkBob, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = isBurning ? '#ff5400' : '#1b3b06';
+      ctx.lineWidth = Math.max(2, w * 0.08);
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.2, h * 0.42 + walkBob); ctx.lineTo(-w * 0.55, h * 0.25); ctx.lineTo(-w * 0.65, h * 0.85 + limbSwing * 6);
+      ctx.moveTo(w * 0.2, h * 0.42 + walkBob); ctx.lineTo(w * 0.55, h * 0.25); ctx.lineTo(w * 0.65, h * 0.85 - limbSwing * 6);
+      ctx.stroke();
+
+    } else if (t === 'mega_behemoth' || t === 'boss_biotitan' || t === 'spitter') {
+      ctx.fillStyle = isBurning ? '#ff7b00' : (isFrozen ? '#caf0f8' : (t === 'mega_behemoth' ? '#1b4332' : '#38b000'));
+      ctx.beginPath();
+      ctx.arc(0, h * 0.42 + walkBob, w * 0.36, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ccff33';
+      const boilPulse = Math.sin(Date.now() / 100) * 2;
+      ctx.beginPath();
+      ctx.arc(-w * 0.15, h * 0.35 + walkBob, 6 + boilPulse, 0, Math.PI * 2);
+      ctx.arc(w * 0.15, h * 0.45 + walkBob, 7 + boilPulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#007200';
+      ctx.beginPath();
+      ctx.arc(0, h * 0.14 + walkBob, w * 0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#70e000';
+      ctx.beginPath();
+      ctx.arc(0, h * 0.18 + walkBob, w * 0.14, 0, Math.PI);
+      ctx.fill();
+
+    } else if (t === 'mega_necrotitan' || t === 'overlord') {
+      ctx.fillStyle = isBurning ? '#ff0054' : '#240046';
+      ctx.fillRect(-w * 0.4, h * 0.16 + walkBob, w * 0.8, h * 0.46);
+
+      ctx.fillStyle = '#ffd166';
+      ctx.fillRect(-w * 0.4, h * 0.16 + walkBob, w * 0.8, 6);
+
+      const corePulse = Math.sin(Date.now() / 80) * 3;
+      const coreGlow = ctx.createRadialGradient(0, h * 0.36 + walkBob, 2, 0, h * 0.36 + walkBob, 16 + corePulse);
+      coreGlow.addColorStop(0, '#ffffff');
+      coreGlow.addColorStop(0.4, '#e63946');
+      coreGlow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = coreGlow;
+      ctx.beginPath();
+      ctx.arc(0, h * 0.36 + walkBob, 16 + corePulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#e9ecef';
+      ctx.beginPath();
+      ctx.arc(0, h * 0.06 + walkBob, w * 0.24, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#ffd166';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.16, h * 0.02 + walkBob); ctx.quadraticCurveTo(-w * 0.5, -h * 0.18 + walkBob, -w * 0.35, -h * 0.35 + walkBob);
+      ctx.moveTo(w * 0.16, h * 0.02 + walkBob); ctx.quadraticCurveTo(w * 0.5, -h * 0.18 + walkBob, w * 0.35, -h * 0.35 + walkBob);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffd166';
+      ctx.beginPath();
+      ctx.arc(-w * 0.09, h * 0.05 + walkBob, 4.5, 0, Math.PI * 2);
+      ctx.arc(w * 0.09, h * 0.05 + walkBob, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+
+    } else {
+      ctx.fillStyle = isBurning ? '#ff5400' : (isFrozen ? '#90e0ef' : (this.isBoss ? '#6a040f' : '#40916c'));
+      ctx.fillRect(-w * 0.28, h * 0.18 + walkBob, w * 0.56, h * 0.44);
+
+      ctx.fillStyle = '#1b263b';
+      const legW = w * 0.22;
+      ctx.fillRect(-w * 0.26, h * 0.58 + walkBob - limbSwing * 6, legW, h * 0.4);
+      ctx.fillRect(w * 0.04, h * 0.58 + walkBob + limbSwing * 6, legW, h * 0.4);
+
+      ctx.fillStyle = this.isBoss ? '#e85d04' : '#52b788';
+      ctx.beginPath();
+      ctx.arc(0, h * 0.1 + walkBob, w * 0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ff0033';
+      ctx.beginPath();
+      ctx.arc(-w * 0.08, h * 0.09 + walkBob, 3, 0, Math.PI * 2);
+      ctx.arc(w * 0.08, h * 0.09 + walkBob, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.save();
+      ctx.translate(-w * 0.32, h * 0.22 + walkBob);
+      ctx.rotate(0.2 + limbSwing * 0.15);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(0, 0, w * 0.18, h * 0.36);
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(w * 0.18, h * 0.22 + walkBob);
+      ctx.rotate(-0.2 - limbSwing * 0.15);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(0, 0, w * 0.18, h * 0.36);
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+}
+
+function renderMinimap() {
+  const size = mapCanvas.width;
+  const center = size / 2;
+  const scale = 11;
+  const viewRadius = 4.0;
+
+  mapCtx.clearRect(0, 0, size, size);
+
+  mapCtx.save();
+  mapCtx.beginPath();
+  mapCtx.arc(center, center, center - 2, 0, Math.PI * 2);
+  mapCtx.clip();
+
+  mapCtx.fillStyle = '#1b2219';
+  mapCtx.fillRect(0, 0, size, size);
+
+  const minX = Math.max(0, Math.floor(player.x - viewRadius));
+  const maxX = Math.min(MAP_SIZE - 1, Math.floor(player.x + viewRadius));
+  const minY = Math.max(0, Math.floor(player.y - viewRadius));
+  const maxY = Math.min(MAP_SIZE - 1, Math.floor(player.y + viewRadius));
+
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      if (MAP[y][x] === 1) {
+        const screenX = center + (x - player.x) * scale;
+        const screenY = center + (y - player.y) * scale;
+        mapCtx.fillStyle = '#3a4454';
+        mapCtx.fillRect(screenX, screenY, scale, scale);
+        mapCtx.strokeStyle = '#222938';
+        mapCtx.lineWidth = 1;
+        mapCtx.strokeRect(screenX, screenY, scale, scale);
+      }
+    }
+  }
+
+  drops.forEach(d => {
+    const dist = Math.hypot(d.x - player.x, d.y - player.y);
+    if (dist <= viewRadius) {
+      const dx = center + (d.x - player.x) * scale;
+      const dy = center + (d.y - player.y) * scale;
+      mapCtx.fillStyle = d.dropType === 'health' ? '#ff3366' : (d.dropType === 'mana' ? '#00b4d8' : '#ffd166');
+      mapCtx.beginPath();
+      mapCtx.arc(dx, dy, 2.5, 0, Math.PI * 2);
+      mapCtx.fill();
+    }
+  });
+
+  projectiles.forEach(p => {
+    const dist = Math.hypot(p.x - player.x, p.y - player.y);
+    if (dist <= viewRadius) {
+      const px = center + (p.x - player.x) * scale;
+      const py = center + (p.y - player.y) * scale;
+      mapCtx.fillStyle = p.color;
+      mapCtx.beginPath();
+      mapCtx.arc(px, py, 2, 0, Math.PI * 2);
+      mapCtx.fill();
+    }
+  });
+
+  enemyProjectiles.forEach(p => {
+    const dist = Math.hypot(p.x - player.x, p.y - player.y);
+    if (dist <= viewRadius) {
+      const px = center + (p.x - player.x) * scale;
+      const py = center + (p.y - player.y) * scale;
+      mapCtx.fillStyle = '#ff0054';
+      mapCtx.beginPath();
+      mapCtx.arc(px, py, 2.5, 0, Math.PI * 2);
+      mapCtx.fill();
+    }
+  });
+
+  zombies.forEach(z => {
+    const dist = Math.hypot(z.x - player.x, z.y - player.y);
+    if (dist <= viewRadius) {
+      const zx = center + (z.x - player.x) * scale;
+      const zy = center + (z.y - player.y) * scale;
+      mapCtx.fillStyle = z.isBoss ? '#ff0054' : (z.burnTimer > 0 ? '#ff5400' : '#52b788');
+      mapCtx.beginPath();
+      mapCtx.arc(zx, zy, z.isBoss ? 5 : 3, 0, Math.PI * 2);
+      mapCtx.fill();
+      mapCtx.strokeStyle = '#000';
+      mapCtx.lineWidth = 1;
+      mapCtx.stroke();
+    }
+  });
+
+  const fov = Math.PI / 3;
+  mapCtx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+  mapCtx.beginPath();
+  mapCtx.moveTo(center, center);
+  mapCtx.arc(center, center, scale * 3.2, player.angle - fov / 2, player.angle + fov / 2);
+  mapCtx.closePath();
+  mapCtx.fill();
+
+  mapCtx.fillStyle = '#f1faee';
+  mapCtx.beginPath();
+  mapCtx.arc(center, center, 3.5, 0, Math.PI * 2);
+  mapCtx.fill();
+
+  mapCtx.strokeStyle = '#ffb703';
+  mapCtx.lineWidth = 1.5;
+  mapCtx.beginPath();
+  mapCtx.moveTo(center, center);
+  mapCtx.lineTo(center + Math.cos(player.angle) * 10, center + Math.sin(player.angle) * 10);
+  mapCtx.stroke();
+
+  mapCtx.restore();
+}
+
+function render3D() {
+  const fov = Math.PI / 3;
+  const numRays = canvas.width;
+  const halfFov = fov / 2;
+  const halfHeight = canvas.height / 2;
+  const curTerrain = LEVELS[currentLevelIndex].terrain;
+
+  const ceilGrad = ctx.createLinearGradient(0, 0, 0, halfHeight);
+  ceilGrad.addColorStop(0, curTerrain.ceil);
+  ceilGrad.addColorStop(1, '#1b222c');
+  ctx.fillStyle = ceilGrad;
+  ctx.fillRect(0, 0, canvas.width, halfHeight);
+
+  const floorGrad = ctx.createLinearGradient(0, halfHeight, 0, canvas.height);
+  floorGrad.addColorStop(0, curTerrain.floor[0]);
+  floorGrad.addColorStop(0.5, curTerrain.floor[1]);
+  floorGrad.addColorStop(1, curTerrain.floor[2]);
+  ctx.fillStyle = floorGrad;
+  ctx.fillRect(0, halfHeight, canvas.width, halfHeight);
+
+  for (let i = 0; i < numRays; i++) {
+    const rayAngle = (player.angle - halfFov) + (i / numRays) * fov;
+    let distanceToWall = 0;
+    let hitWall = false;
+    let hitX = 0, hitY = 0;
+    let isVertical = false;
+
+    const cos = Math.cos(rayAngle);
+    const sin = Math.sin(rayAngle);
+
+    while (!hitWall && distanceToWall < 16) {
+      distanceToWall += 0.03;
+      hitX = player.x + cos * distanceToWall;
+      hitY = player.y + sin * distanceToWall;
+
+      const checkX = Math.floor(hitX);
+      const checkY = Math.floor(hitY);
+
+      if (checkX < 0 || checkX >= MAP_SIZE || checkY < 0 || checkY >= MAP_SIZE) {
+        hitWall = true;
+        distanceToWall = 16;
+      } else if (MAP[checkY][checkX] === 1) {
+        hitWall = true;
+        const blockX = hitX - checkX;
+        if (blockX < 0.05 || blockX > 0.95) isVertical = true;
+      }
+    }
+
+    const correctedDist = distanceToWall * Math.cos(rayAngle - player.angle);
+    zBuffer[i] = correctedDist;
+
+    const wallHeight = (canvas.height / correctedDist);
+    const ceiling = halfHeight - wallHeight / 2;
+
+    let wallU = isVertical ? (hitY % 1) : (hitX % 1);
+    if (wallU < 0) wallU += 1;
+    const texX = Math.floor(wallU * TEX_SIZE);
+
+    ctx.drawImage(
+      wallTextureCanvas,
+      texX, 0, 1, TEX_SIZE,
+      i, ceiling, 1, wallHeight
+    );
+
+    const fog = Math.min(1, correctedDist / 12);
+    const sideShadow = isVertical ? 0.2 : 0.0;
+    ctx.fillStyle = `rgba(5, 7, 10, ${Math.min(0.95, fog * 0.85 + sideShadow)})`;
+    ctx.fillRect(i, ceiling, 1, wallHeight);
+  }
+
+  const sprites = [];
+
+  zombies.forEach(z => {
+    sprites.push({ type: 'zombie', obj: z, dist: Math.hypot(player.x - z.x, player.y - z.y) });
+  });
+  drops.forEach(d => {
+    sprites.push({ type: 'drop', obj: d, dist: Math.hypot(player.x - d.x, player.y - d.y) });
+  });
+  projectiles.forEach(p => {
+    sprites.push({ type: 'proj', obj: p, dist: Math.hypot(player.x - p.x, player.y - p.y) });
+  });
+  enemyProjectiles.forEach(p => {
+    sprites.push({ type: 'enemyProj', obj: p, dist: Math.hypot(player.x - p.x, player.y - p.y) });
+  });
+
+  sprites.sort((a, b) => b.dist - a.dist);
+
+  sprites.forEach(s => {
+    if (s.dist < 0.2 || s.dist > 15) return;
+
+    let spriteAngle = Math.atan2(s.obj.y - player.y, s.obj.x - player.x) - player.angle;
+    while (spriteAngle < -Math.PI) spriteAngle += Math.PI * 2;
+    while (spriteAngle > Math.PI) spriteAngle -= Math.PI * 2;
+
+    if (Math.abs(spriteAngle) > halfFov + 0.3) return;
+
+    const screenX = (canvas.width / 2) + Math.tan(spriteAngle) * (canvas.width / 2) / Math.tan(halfFov);
+    const spriteHeight = (canvas.height / s.dist) * (s.obj.scale || 1.0);
+    const spriteWidth = spriteHeight * 0.65;
+    const screenY = (canvas.height / 2) - spriteHeight / 2;
+
+    const xIndex = Math.floor(screenX);
+    if (xIndex >= 0 && xIndex < canvas.width && zBuffer[xIndex] > s.dist) {
+      if (s.type === 'zombie') {
+        const z = s.obj;
+        const brightness = Math.max(0.15, 1 - s.dist / 14);
+        z.draw3DForm(screenX, screenY, spriteWidth, spriteHeight, brightness);
+
+        const info = ZOMBIE_INFO[z.type] || { name: "Zombie", color: "#52b788" };
+        const textFontSize = Math.max(9, Math.min(14, Math.floor(110 / s.dist)));
+        ctx.font = `bold ${textFontSize}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = info.color;
+        ctx.shadowColor = '#000';
+        ctx.shadowBlur = 4;
+        
+        const nameY = screenY - (z.isBoss ? 16 : 22);
+        ctx.fillText(info.name, screenX, nameY);
+        ctx.shadowBlur = 0;
+
+        if (!z.isBoss) {
+          const barW = spriteWidth;
+          const barH = 4;
+          ctx.fillStyle = 'rgba(0,0,0,0.6)';
+          ctx.fillRect(screenX - barW / 2, screenY - 14, barW, barH);
+          ctx.fillStyle = '#52b788';
+          ctx.fillRect(screenX - barW / 2, screenY - 14, barW * (Math.max(0, z.hp) / z.maxHp), barH);
+        }
+      } else if (s.type === 'drop') {
+        s.obj.drawGraphic(screenX, screenY + spriteHeight * 0.6, spriteHeight * 0.35, s.dist);
+      } else if (s.type === 'proj' || s.type === 'enemyProj') {
+        ctx.fillStyle = s.obj.color;
+        ctx.beginPath();
+        ctx.arc(screenX, canvas.height / 2, Math.max(3, 14 / s.dist), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  });
+
+  renderFPWeapon();
+}
+
+function renderFPWeapon() {
+  const isBuffed = player.buffTimer > 0;
+  const swing = Math.sin(player.swingAnim * Math.PI);
+  const time = Date.now() / 180;
+  const breathBob = Math.sin(player.bobTimer) * 4;
+  const breathSway = Math.cos(player.bobTimer * 0.5) * 3;
+
+  ctx.save();
+
+  if (player.heroClass === 'warrior') {
+    const handX = canvas.width * 0.68 - swing * 85 + breathSway;
+    const handY = canvas.height - 20 - swing * 55 + breathBob;
+    ctx.translate(handX, handY);
+    ctx.rotate(-0.25 + (player.swingAnim * 1.1));
+
+    if (player.swingAnim > 0.1) {
+      ctx.strokeStyle = isBuffed ? 'rgba(255, 209, 102, 0.7)' : 'rgba(240, 245, 255, 0.55)';
+      ctx.lineWidth = 14;
+      ctx.beginPath();
+      ctx.arc(-20, -110, 130, -Math.PI / 2.2, Math.PI / 3);
+      ctx.stroke();
+    }
+
+    if (!isBuffed) {
+      const bladeGrad = ctx.createLinearGradient(-14, -200, 14, 0);
+      bladeGrad.addColorStop(0, '#ffffff');
+      bladeGrad.addColorStop(0.3, '#d8e2dc');
+      bladeGrad.addColorStop(0.8, '#8d99ae');
+      bladeGrad.addColorStop(1, '#4a4e69');
+      ctx.fillStyle = bladeGrad;
+      ctx.beginPath();
+      ctx.moveTo(-12, 0); ctx.lineTo(-14, -180); ctx.lineTo(0, -210); ctx.lineTo(14, -180); ctx.lineTo(12, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#edf2f4';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#2b2d42';
+      ctx.fillRect(-3, -165, 6, 155);
+      ctx.fillStyle = '#00b4d8';
+      for (let rY = -150; rY <= -30; rY += 24) { ctx.fillRect(-1.5, rY, 3, 8); }
+
+      ctx.fillStyle = '#ffb703';
+      ctx.beginPath();
+      ctx.moveTo(-36, -8); ctx.quadraticCurveTo(0, -20, 36, -8); ctx.lineTo(32, 6); ctx.quadraticCurveTo(0, -6, -32, 6);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#e63946';
+      ctx.beginPath();
+      ctx.arc(0, -7, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#3a2010';
+      ctx.fillRect(-7, 4, 14, 48);
+
+      ctx.fillStyle = '#ffb703';
+      ctx.beginPath();
+      ctx.arc(0, 56, 10, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = '#402008';
+      ctx.fillRect(-7, -80, 14, 170);
+      ctx.fillStyle = '#ffb703';
+      ctx.fillRect(-5, -240, 10, 160);
+
+      ctx.fillStyle = '#ffd166';
+      ctx.beginPath();
+      ctx.moveTo(-8, -210); ctx.lineTo(0, -280); ctx.lineTo(8, -210);
+      ctx.moveTo(-8, -170); ctx.lineTo(-30, -240); ctx.lineTo(-18, -200);
+      ctx.moveTo(8, -170); ctx.lineTo(30, -240); ctx.lineTo(18, -200);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = '#6c757d';
+    ctx.beginPath();
+    ctx.roundRect(-22, 12, 44, 40, 8);
+    ctx.fill();
+
+  } else if (player.heroClass === 'wizard') {
+    const handX = canvas.width * 0.72 - swing * 40 + breathSway;
+    const handY = canvas.height - 15 - swing * 45 + breathBob;
+    ctx.translate(handX, handY);
+    ctx.rotate(-0.18 + (player.swingAnim * 0.5));
+
+    const staffGrad = ctx.createLinearGradient(-10, -180, 10, 40);
+    staffGrad.addColorStop(0, '#480ca8');
+    staffGrad.addColorStop(0.5, '#240046');
+    staffGrad.addColorStop(1, '#10002b');
+    ctx.fillStyle = staffGrad;
+    ctx.fillRect(-8, -170, 16, 220);
+
+    ctx.fillStyle = isBuffed ? '#ff0054' : '#7209b7';
+    ctx.beginPath();
+    ctx.moveTo(-22, -170); ctx.quadraticCurveTo(-32, -210, -14, -235); ctx.lineTo(-6, -180);
+    ctx.moveTo(22, -170); ctx.quadraticCurveTo(32, -210, 14, -235); ctx.lineTo(6, -180);
+    ctx.fill();
+
+    const orbY = -215;
+    const orbGlow = ctx.createRadialGradient(0, orbY, 2, 0, orbY, isBuffed ? 34 : 24);
+    orbGlow.addColorStop(0, '#ffffff');
+    orbGlow.addColorStop(0.35, isBuffed ? '#ff0054' : '#4cc9f0');
+    orbGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = orbGlow;
+    ctx.beginPath();
+    ctx.arc(0, orbY, isBuffed ? 34 : 24, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#3c096c';
+    ctx.beginPath();
+    ctx.roundRect(-24, 18, 48, 44, 10);
+    ctx.fill();
+
+  } else if (player.heroClass === 'archer') {
+    const handX = canvas.width * 0.65 + breathSway;
+    const handY = canvas.height - 20 - swing * 35 + breathBob;
+    ctx.translate(handX, handY);
+
+    ctx.strokeStyle = isBuffed ? '#ffb703' : '#6f1d1b';
+    ctx.lineWidth = 9;
+    ctx.beginPath();
+    ctx.moveTo(0, 40);
+    ctx.quadraticCurveTo(55, -60, 0, -165);
+    ctx.stroke();
+
+    const drawPull = isBuffed ? -22 : -12;
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 40); ctx.lineTo(drawPull, -60); ctx.lineTo(0, -165);
+    ctx.stroke();
+
+    ctx.fillStyle = '#e9c46a';
+    ctx.fillRect(drawPull, -120, 6, 120);
+
+    let tipColor = arrowType === 'fire' ? '#e76f51' : (arrowType === 'ice' ? '#48cae4' : '#ced4da');
+    ctx.fillStyle = tipColor;
+    ctx.beginPath();
+    ctx.moveTo(drawPull - 5, -120); ctx.lineTo(drawPull + 3, -150); ctx.lineTo(drawPull + 11, -120);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#582f0e';
+    ctx.beginPath();
+    ctx.roundRect(14, -80, 20, 38, 6);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function spawnLevelZombie() {
+  const currentCfg = LEVELS[currentLevelIndex];
+  const typeRoll = currentCfg.types[Math.floor(Math.random() * currentCfg.types.length)];
+  return new ZombieFPS(typeRoll, currentLevelIndex, false);
+}
+
+function spawnLevelBoss() {
+  bossSpawned = true;
+  const currentCfg = LEVELS[currentLevelIndex];
+  currentBoss = new ZombieFPS(currentCfg.bossType, currentLevelIndex, true);
+  zombies.push(currentBoss);
+
+  const bossHud = document.getElementById('boss-hud');
+  bossHud.style.display = 'block';
+  document.getElementById('boss-name').innerText = `BOSS: ${currentCfg.bossName}`;
+  document.getElementById('goal-status').innerHTML = `<span style="color:#ff0054; font-weight:bold;">DEFEAT BOSS!</span>`;
+}
+
+function loadLevel(levelIdx) {
+  currentLevelIndex = levelIdx;
+  levelKills = 0;
+  bossSpawned = false;
+  currentBoss = null;
+  document.getElementById('boss-hud').style.display = 'none';
+
+  updateWallTexture(LEVELS[currentLevelIndex].terrain);
+  document.getElementById('level-badge').innerText = `LEVEL ${levelIdx + 1}: ${LEVELS[levelIdx].name}`;
+  
+  zombies = [];
+  drops = [];
+  projectiles = [];
+  enemyProjectiles = [];
+  spawnTimer = 0;
+
+  for (let i = 0; i < 6; i++) {
+    zombies.push(spawnLevelZombie());
+  }
+}
+
+function startGame() {
+  document.getElementById('char-select-screen').style.display = 'none';
+  document.getElementById('game-over-screen').style.display = 'none';
+  document.getElementById('level-clear-screen').style.display = 'none';
+  document.getElementById('victory-screen').style.display = 'none';
+  
+  const isArcher = chosenClass === 'archer';
+  document.getElementById('arrow-selector').style.display = isArcher ? 'flex' : 'none';
+  
+  const mpContainer = document.getElementById('mp-container');
+  mpContainer.style.display = chosenClass === 'wizard' ? 'block' : 'none';
+
+  document.getElementById('mobile-ui').style.display = deviceMode === 'mobile' ? 'block' : 'none';
+  document.getElementById('click-prompt').style.display = deviceMode === 'desktop' ? 'block' : 'none';
+  document.getElementById('exit-btn').style.display = 'block';
+
+  player = new PlayerFPS(chosenClass);
+  totalKills = 0;
+  loadLevel(0);
+
+  gameState = 'playing';
+  if (deviceMode === 'desktop') canvas.requestPointerLock();
+}
+
+function nextLevel() {
+  document.getElementById('level-clear-screen').style.display = 'none';
+  if (currentLevelIndex + 1 < LEVELS.length) {
+    loadLevel(currentLevelIndex + 1);
+    player.hp = Math.min(player.maxHp, player.hp + 100);
+    gameState = 'playing';
+    if (deviceMode === 'desktop') canvas.requestPointerLock();
+  } else {
+    gameState = 'victory';
+    if (document.exitPointerLock) document.exitPointerLock();
+    document.getElementById('victory-screen').style.display = 'flex';
+  }
+}
+
+function updateHUD() {
+  const hpFill = document.getElementById('hp-fill');
+  const hpLabel = document.getElementById('hp-label');
+  const hpPct = Math.max(0, (player.hp / player.maxHp) * 100);
+  hpFill.style.width = hpPct + '%';
+  hpLabel.innerText = `HP: ${Math.ceil(Math.max(0, player.hp))} / ${player.maxHp}`;
+
+  if (player.heroClass === 'wizard') {
+    const mpFill = document.getElementById('mp-fill');
+    const mpLabel = document.getElementById('mp-label');
+    const mpPct = Math.max(0, (player.mp / player.maxMp) * 100);
+    mpFill.style.width = hpPct + '%';
+    mpLabel.innerText = `MP: ${Math.ceil(player.mp)} / ${player.maxMp}`;
+  }
+
+  const curQuota = LEVELS[currentLevelIndex].quota;
+  if (!bossSpawned) {
+    document.getElementById('goal-status').innerHTML = `Minions: <span id="quota-display" style="color:#ffd166">${levelKills} / ${curQuota}</span>`;
+  }
+  document.getElementById('kill-display').innerText = `${totalKills}`;
+
+  if (bossSpawned && currentBoss && currentBoss.hp > 0) {
+    const bossFill = document.getElementById('boss-bar-fill');
+    const bossPct = Math.max(0, (currentBoss.hp / currentBoss.maxHp) * 100);
+    bossFill.style.width = bossPct + '%';
+  }
+}
+
+function loop() {
+  if (gameState === 'playing') {
+    spawnTimer++;
+    const currentInterval = Math.max(30, baseSpawnInterval - Math.floor(currentLevelIndex * 3));
+    if (spawnTimer % currentInterval === 0 && zombies.length < 16 && !bossSpawned) {
+      zombies.push(spawnLevelZombie());
+    }
+
+    player.update();
+
+    for (let i = drops.length - 1; i >= 0; i--) {
+      drops[i].update();
+      if (drops[i].life <= 0) drops.splice(i, 1);
+    }
+
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+      const p = projectiles[i];
+      p.update();
+
+      for (let j = zombies.length - 1; j >= 0; j--) {
+        const z = zombies[j];
+        if (Math.hypot(z.x - p.x, z.y - p.y) < 0.6) {
+          z.hp -= p.damage;
+          if (p.type === 'fire') z.burnTimer = 80;
+          if (p.type === 'ice') z.slowTimer = 100;
+          if (p.type !== 'bigMagic') p.dead = true;
+          break;
+        }
+      }
+
+      if (p.dead) projectiles.splice(i, 1);
+    }
+
+    for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
+      const ep = enemyProjectiles[i];
+      ep.update();
+      if (ep.dead) enemyProjectiles.splice(i, 1);
+    }
+
+    for (let i = zombies.length - 1; i >= 0; i--) {
+      const z = zombies[i];
+      z.update();
+      if (z.hp <= 0) {
+        totalKills++;
+
+        const roll = Math.random();
+        if (roll < 0.14) drops.push(new DropFPS(z.x, z.y, 'health', chosenClass));
+        else if (roll < 0.22) drops.push(new DropFPS(z.x, z.y, 'mana', chosenClass));
+        else if (roll < 0.28) drops.push(new DropFPS(z.x, z.y, 'speed', chosenClass));
+        else if (roll < 0.34) drops.push(new DropFPS(z.x, z.y, 'shield', chosenClass));
+        else if (roll < 0.39) drops.push(new DropFPS(z.x, z.y, 'freeze', chosenClass));
+        else if (roll < 0.43) drops.push(new DropFPS(z.x, z.y, 'nuke', chosenClass));
+        else if (roll < 0.50) drops.push(new DropFPS(z.x, z.y, 'buff', chosenClass));
+
+        if (!z.isBoss) {
+          levelKills++;
+          if (levelKills >= LEVELS[currentLevelIndex].quota && !bossSpawned) {
+            spawnLevelBoss();
+          }
+        } else {
+          document.getElementById('boss-hud').style.display = 'none';
+          gameState = 'levelclear';
+          if (document.exitPointerLock) document.exitPointerLock();
+          document.getElementById('level-clear-desc').innerText = `You defeated ${LEVELS[currentLevelIndex].bossName} and purified Level ${currentLevelIndex + 1}!`;
+          document.getElementById('level-clear-screen').style.display = 'flex';
+          break;
+        }
+
+        zombies.splice(i, 1);
+      }
+    }
+
+    render3D();
+    renderMinimap();
+    updateHUD();
+
+    if (player.hp <= 0) {
+      gameState = 'gameover';
+      if (document.exitPointerLock) document.exitPointerLock();
+      document.getElementById('survival-stats').innerText = `You made it to Level ${currentLevelIndex + 1} (${LEVELS[currentLevelIndex].name}) with ${totalKills} kills before falling.`;
+      document.getElementById('game-over-screen').style.display = 'flex';
+      document.getElementById('arrow-selector').style.display = 'none';
+      document.getElementById('buff-box').innerHTML = '';
+      document.getElementById('mobile-ui').style.display = 'none';
+      document.getElementById('exit-btn').style.display = 'none';
+      document.getElementById('boss-hud').style.display = 'none';
+    }
+  }
+
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>
